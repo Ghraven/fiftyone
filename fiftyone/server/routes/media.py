@@ -74,8 +74,7 @@ class Media(HTTPEndpoint):
                 path,
             )
         response.headers["Accept-Ranges"] = "bytes"
-
-        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Origin"] = "localhost"
         response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
         response.headers[
             "Access-Control-Allow-Headers"

@@ -108,9 +108,9 @@ schema = gql.Schema(
 )
 
 mtypes = (  # ensure mimetypes for Windows
-    ('application/javascript', '.js'),
-    ('text/css', '.css'),
-    ('application/wasm', '.wasm'),
+    ("application/javascript", ".js"),
+    ("text/css", ".css"),
+    ("application/wasm", ".wasm"),
 )
 for mtype, ext in mtypes:
     mimetypes.add_type(mtype, ext)
@@ -119,7 +119,7 @@ app = Starlette(
     middleware=[
         Middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=["localhost"],
             allow_methods=["GET", "PATCH", "POST", "HEAD", "OPTIONS"],
             allow_headers=[
                 "access-control-allow-origin",
