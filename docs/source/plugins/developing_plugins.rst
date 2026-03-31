@@ -2623,27 +2623,27 @@ Overriding request parameters per stage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, each stage in a pipeline inherits the same execution context as the
-top-level pipeline operator — including its ``view``, ``view_name``, ``filters``,
+top-level pipeline operator — including its `view`, `view_name`, `filters`,
 and other request parameters.
 
-Use ``request_params_overrides`` on a :class:`PipelineStage
+Use `request_params_overrides` on a :class:`PipelineStage
 <fiftyone.operators.types.PipelineStage>` to give a specific stage a different
-execution context. Any key you include in ``request_params_overrides`` will
+execution context. Any key you include in `request_params_overrides` will
 shadow the corresponding value from the top-level request for that stage only;
 all other stages are unaffected.
 
 Overridable parameters include:
 
-- ``view`` — a list of view stages to apply
-- ``view_name`` — the name of a saved view to use
-- ``filters`` — a dictionary of filters to apply
-- any other valid :ref:`execution context <operator-execution-context>` request
-  parameter
+-   `view` — a list of view stages to apply
+-   `view_name` — the name of a saved view to use
+-   `filters` — a dictionary of filters to apply
+-   any other valid
+    :ref:`execution context <operator-execution-context>` request parameter
 
 .. note::
 
-    Do **not** include ``params`` inside ``request_params_overrides``. Use the
-    ``params`` field of :class:`PipelineStage
+    Do **not** include `params` inside `request_params_overrides`. Use the
+    `params` field of :class:`PipelineStage
     <fiftyone.operators.types.PipelineStage>` directly for operator parameters.
 
 .. code-block:: python
