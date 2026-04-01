@@ -15,6 +15,14 @@ export class PagePom {
     this.datasetSelector = new SelectorPom(page, eventUtils, "dataset");
   }
 
+  get loadingScreenCount(): Promise<number> {
+    // eslint-disable-next-line
+    // @ts-ignore
+    return this.page.evaluate(
+      () => window.__FO_PLAYWRIGHT_LOADING_SCREEN_COUNT
+    );
+  }
+
   get pathname() {
     return this.url.pathname;
   }
@@ -45,6 +53,11 @@ export class PagePom {
 
 class PageAsserter {
   constructor(private readonly pagePom: PagePom) {}
+
+  async verifyLoadingScreenCount(count: number) {
+    const observedCount = await this.pagePom.loadingScreenCount;
+    expect(observedCount).toBe(count);
+  }
 
   async verifyPage(pagename: string) {
     await expect(this.pagePom.getPage(pagename)).toBeVisible();

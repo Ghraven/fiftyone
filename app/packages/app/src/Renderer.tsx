@@ -11,7 +11,7 @@ import {
   useSetModalState,
 } from "@fiftyone/state";
 import { useColorScheme } from "@mui/material";
-import React, {
+import {
   Suspense,
   useCallback,
   useEffect,
@@ -51,6 +51,15 @@ const ColorScheme = () => {
 
   return null;
 };
+
+const LoadingFallback = () => {
+
+  useEffect(() => {
+   document.dispatchEvent(new CustomEvent("loading-screen"));
+  }, [])
+
+  return   <Loading>Pixelating...</Loading>
+}
 
 const Renderer = () => {
   const routeEntry = useRecoilValue(entry);
@@ -94,12 +103,11 @@ const Renderer = () => {
     );
   }, [router, setPending]);
 
-  const loading = <Loading>Pixelating...</Loading>;
 
-  if (!routeEntry || !ready) return loading;
+  if (!routeEntry || !ready) return <LoadingFallback/>;
 
   return (
-    <Suspense fallback={loading}>
+    <Suspense fallback={<LoadingFallback/>}>
       <ColorScheme key={"color-scheme"} />
       <Modal key={"modal"} />
       <Route key={"route"} route={routeEntry} />

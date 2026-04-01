@@ -87,6 +87,13 @@ export type RenderConfig3dImperativeState = {
   getIsPinned: () => Promise<boolean>;
 };
 
+export const useIs3dVisible = () =>
+  useRecoilValue(internals.groupMediaIs3dVisible);
+
+export const useIs3dPinned = () => useRecoilValue(internals.is3dPinned);
+
+export const useActive3dSlices = () => useRecoilValue(internals.active3dSlices);
+
 /**
  * Suspense-compatible 3D render state for React rendering.
  */

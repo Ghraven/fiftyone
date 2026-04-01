@@ -269,7 +269,9 @@ const createBlankDataset = (() => {
       addFields.push(`
     dataset.add_sample_field(
         "${path}", fo.${fieldType},
-        embedded_doc_type=${embeddedDocType ? "fo." : ""}${embeddedDocType}
+        embedded_doc_type=${
+          embeddedDocType !== "None" ? "fo." : ""
+        }${embeddedDocType}
     )`);
     }
 
@@ -285,6 +287,7 @@ const createBlankDataset = (() => {
     dataset = fo.Dataset("${datasetName}")
     dataset.add_sample_field("index", fo.IntField)
     dataset.media_type = "image"
+    dataset.persistent = True
 
     now = datetime.now()
 
