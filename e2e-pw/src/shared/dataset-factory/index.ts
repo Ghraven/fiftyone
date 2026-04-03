@@ -294,13 +294,13 @@ const createBlankDataset = (() => {
 
     # an easy hack for creating a small number of samples
     # fix me to scale this factory
-    ${addFields.join("\n")}
+    ${addFields.join("\n    ")}
 
     samples = []
     sample_data = []
 
     # also a hack
-    ${sampleData.join("\n")}
+    ${sampleData.join("\n    ")}
     
     for idx in range(0, ${numSamples}):
         sample = fo.Sample(

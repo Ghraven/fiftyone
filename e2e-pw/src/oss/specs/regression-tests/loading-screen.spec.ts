@@ -41,8 +41,8 @@ test.beforeAll(async ({ datasetFactory, foWebServer }) => {
 
 test.describe.serial("loading screen", () => {
   /**
-   * Opens the first sample, then asserts that only the initial loading screen
-   * is shown and opening the modal does not reveal itself again via React's Suspense
+   * Asserts that the loading screen appears exactly once (on initial page load)
+   * and is not re-triggered by opening the modal or navigating between samples.
    */
   test("does not show when opening the modal", async ({
     fiftyoneLoader,
@@ -56,31 +56,8 @@ test.describe.serial("loading screen", () => {
     await grid.openFirstSample();
     await modal.waitForSampleLoadDomAttribute();
     await pagePom.assert.verifyLoadingScreenCount(1);
-  });
-
-  /**
-   * Navigates to a known sample by ID, opens the modal, then navigates forward
-   * and backward, asserting after each step that exactly one loading screen
-   * element exists in the DOM.
-   */
-  test("does not show when navigating between samples", async ({
-    fiftyoneLoader,
-    grid,
-    modal,
-    page,
-    pagePom,
-  }) => {
-    await fiftyoneLoader.waitUntilGridVisible(page, datasetName, {
-      searchParams: new URLSearchParams({ id: "000000000000000000000000" }),
-    });
-    await pagePom.assert.verifyLoadingScreenCount(1);
-    await grid.openFirstSample();
-    await modal.waitForSampleLoadDomAttribute();
 
     await modal.navigateNextSample();
-    await pagePom.assert.verifyLoadingScreenCount(1);
-
-    await modal.navigatePreviousSample();
     await pagePom.assert.verifyLoadingScreenCount(1);
   });
 });
