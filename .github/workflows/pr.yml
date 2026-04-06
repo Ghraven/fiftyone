@@ -75,7 +75,6 @@ jobs:
   enterprise-sync:
     if: github.event.action == 'closed' || github.event.pull_request.draft != true
     runs-on: ubuntu-latest
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
         with:
