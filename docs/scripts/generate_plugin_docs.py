@@ -7,13 +7,14 @@ Script for generating plugin documentation dynamically from the FiftyOne plugins
 |
 """
 
+import json
 import os
 import re
 import requests
 import logging
 from pathlib import Path
 from typing import List, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlparse, urljoin
 from datetime import datetime
 
@@ -33,6 +34,7 @@ class Plugin:
     readme_url: str
     category: str
     icon: Optional[str] = None
+    skills: Optional[List[str]] = None  # skill paths from fiftyone.yml
 
 
 class PluginDocGenerator:
@@ -47,6 +49,7 @@ class PluginDocGenerator:
         self.models_dir = self.docs_source_dir / "model_zoo" / "models"
         self.models_dir.mkdir(parents=True, exist_ok=True)
         self._plugin_model_cards = []
+        self._collected_plugin_skills = []
         self._compile_regex_patterns()
 
     def _compile_regex_patterns(self):
@@ -56,9 +59,13 @@ class PluginDocGenerator:
             flags=re.UNICODE,
         )
         self.feature_patterns = [
-            (re.compile(p), f) for p, f in [
+            (re.compile(p), f)
+            for p, f in [
                 (r"vlm|vision.?language|multimodal", "Vision-Language Model"),
-                (r"qwen|gemini|gpt-?4|claude|llava|minicpm", "Vision-Language Model"),
+                (
+                    r"qwen|gemini|gpt-?4|claude|llava|minicpm",
+                    "Vision-Language Model",
+                ),
                 (r"sam\d?|segment\s?anything", "Segmentation"),
                 (r"segmentation|instance.?mask", "Segmentation"),
                 (r"object.?detection|yolo|detectron", "Detection"),
@@ -265,7 +272,7 @@ class PluginDocGenerator:
             .replace("\n", "\\n")
         )
 
-        return f'''---
+        return f"""---
 myst:
   html_meta:
     "description": "{description}"
@@ -274,7 +281,7 @@ myst:
     "og:description": "{description}"
 ---
 
-'''
+"""
 
     def _generate_github_badge(self, plugin: Plugin) -> str:
         """Generate GitHub badge markdown for a plugin."""
@@ -383,6 +390,45 @@ myst:
             logger.debug(f"No manifest found at {url}: {e}")
         return None
 
+    def _fetch_fiftyone_yml_skills(
+        self, owner: str, repo: str, path: str, branch: str
+    ) -> List[str]:
+        """Fetch fiftyone.yml and return skill raw URLs if a skills: field exists."""
+        yml_path = f"{path}/fiftyone.yml" if path else "fiftyone.yml"
+        url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{yml_path}"
+        try:
+            resp = requests.get(url, timeout=6)
+            if resp.status_code != 200:
+                return []
+            skills = []
+            in_skills = False
+            for line in resp.text.splitlines():
+                if re.match(r"^skills\s*:", line):
+                    in_skills = True
+                    continue
+                if in_skills:
+                    m = re.match(r"^\s+-\s+(.+)", line)
+                    if m:
+                        skill_path = m.group(1).strip()
+                        raw_url = (
+                            f"https://raw.githubusercontent.com/"
+                            f"{owner}/{repo}/{branch}/{skill_path}"
+                        )
+                        github_url = f"https://github.com/{owner}/{repo}/blob/{branch}/{skill_path}"
+                        skills.append(
+                            {
+                                "plugin_name": f"@{owner}/{repo}",
+                                "raw_url": raw_url,
+                                "github_url": github_url,
+                            }
+                        )
+                    elif line and not line.startswith(" "):
+                        in_skills = False
+            return skills
+        except Exception as e:
+            logger.debug(f"No fiftyone.yml skills in {owner}/{repo}: {e}")
+        return []
+
     def _format_model_tags(self, tags: List[str]) -> List[str]:
         """Convert model tags to display format."""
         display_tags = []
@@ -398,8 +444,11 @@ myst:
         return display_tags
 
     def _generate_plugin_model_docs(
-        self, models: List[dict], plugin_name: str, plugin_link: str,
-        github_url: str
+        self,
+        models: List[dict],
+        plugin_name: str,
+        plugin_link: str,
+        github_url: str,
     ) -> None:
         """Generate model documentation for plugin models."""
         for model in models:
@@ -414,10 +463,18 @@ myst:
             license_str = model.get("license")
             req = model.get("requirements") or {}
             size_bytes = model.get("size_bytes")
-            size_str = etau.to_human_bytes_str(size_bytes, decimals=2) if size_bytes else None
+            size_str = (
+                etau.to_human_bytes_str(size_bytes, decimals=2)
+                if size_bytes
+                else None
+            )
             packages = req.get("packages") or []
-            supports_cpu = "yes" if (req.get("cpu") or {}).get("support") else "no"
-            supports_gpu = "yes" if (req.get("gpu") or {}).get("support") else "no"
+            supports_cpu = (
+                "yes" if (req.get("cpu") or {}).get("support") else "no"
+            )
+            supports_gpu = (
+                "yes" if (req.get("gpu") or {}).get("support") else "no"
+            )
             model_slug = re.sub(r"[^\w]", "_", name)
             safe_name = plugin_name.replace("-", "--").replace("_", "__")
 
@@ -502,13 +559,15 @@ myst:
             display_tags = self._format_model_tags(tags)
             display_tags.append("Plugin")
 
-            self._plugin_model_cards.append(f"""
+            self._plugin_model_cards.append(
+                f"""
 .. customcarditem::
     :header: {name}
     :description: {description}
     :link: models/{model_slug}.html
     :tags: {",".join(display_tags)}
-""")
+"""
+            )
             logger.info(f"Generated model docs for {name}")
 
     def extract_plugins_from_readme(self, readme_content: str) -> List[Plugin]:
@@ -682,7 +741,9 @@ myst:
 
         for m in self.markdown_img_pattern.finditer(readme_content):
             url = m.group(1)
-            if not url.lower().endswith(banned_exts) and not self._is_badge_url(url):
+            if not url.lower().endswith(
+                banned_exts
+            ) and not self._is_badge_url(url):
                 return self._convert_relative_url(url, github_url)
 
         for m in self.user_attachments_pattern.finditer(readme_content):
@@ -700,7 +761,9 @@ myst:
 
         for m in self.html_img_pattern.finditer(readme_content):
             url = m.group(1)
-            if not url.lower().endswith(banned_exts) and not self._is_badge_url(url):
+            if not url.lower().endswith(
+                banned_exts
+            ) and not self._is_badge_url(url):
                 return self._convert_relative_url(url, github_url)
 
         return None
@@ -826,7 +889,9 @@ myst:
             readme_path = self.plugins_ecosystem_dir / f"{plugin_slug}.md"
 
             with open(readme_path, "w", encoding="utf-8") as f:
-                seo_metadata = self._generate_seo_metadata(plugin, readme_content)
+                seo_metadata = self._generate_seo_metadata(
+                    plugin, readme_content
+                )
                 frontmatter = self._generate_frontmatter(seo_metadata)
                 github_badge = self._generate_github_badge(plugin)
 
@@ -839,7 +904,9 @@ myst:
                     for line in processed_readme.splitlines()
                 )
                 if not has_heading:
-                    processed_readme = f"# {display_name}\n\n" + processed_readme
+                    processed_readme = (
+                        f"# {display_name}\n\n" + processed_readme
+                    )
 
                 if plugin.category == "community":
                     community_note = """```{note}
@@ -953,11 +1020,17 @@ Please review each plugin's documentation and license before use.
                         models, plugin_name, plugin_link, github_url
                     )
 
+            plugin_skills = self._fetch_fiftyone_yml_skills(
+                owner, repo, path, branch
+            )
+            self._collected_plugin_skills.extend(plugin_skills)
+
             extra_tags = [
                 tag
                 for tag, condition in [
                     ("Model", has_model),
                     ("Dataset", has_dataset),
+                    ("Skills", bool(plugin_skills)),
                 ]
                 if condition
             ]
@@ -993,7 +1066,23 @@ Please review each plugin's documentation and license before use.
         with open(cards_path, "w", encoding="utf-8") as f:
             f.write("\n".join(self._plugin_model_cards))
         if self._plugin_model_cards:
-            logger.info(f"Generated {len(self._plugin_model_cards)} plugin model cards")
+            logger.info(
+                f"Generated {len(self._plugin_model_cards)} plugin model cards"
+            )
+
+        skills_json_path = (
+            self.docs_source_dir
+            / "agents"
+            / "skills_cards"
+            / "_plugin_skills.json"
+        )
+        skills_json_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(skills_json_path, "w", encoding="utf-8") as f:
+            json.dump(self._collected_plugin_skills, f, indent=2)
+        if self._collected_plugin_skills:
+            logger.info(
+                f"Wrote {len(self._collected_plugin_skills)} plugin skills to {skills_json_path}"
+            )
 
         logger.info("Plugin documentation generated successfully!")
 
