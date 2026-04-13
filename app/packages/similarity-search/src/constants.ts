@@ -3,7 +3,10 @@ import { OwnerFilter, RunStatus, SearchScope } from "./types";
 
 export const SEARCH_OPERATOR_URI = "@voxel51/panels/similarity_search";
 export const INIT_RUN_OPERATOR_URI = "@voxel51/panels/init_similarity_run";
-export const BRAIN_COMPUTE_SIMILARITY_URI = "@voxel51/brain/compute_similarity";
+export const COMPUTE_SIMILARITY_URI = "@voxel51/operators/compute_similarity";
+export const PANEL_NAME = "similarity_search_panel";
+export const SSE_OPERATOR_URI =
+  "@voxel51/panels/get_similarity_search_subscription_notifier";
 
 export const DAY_MS = 86_400_000;
 
@@ -36,6 +39,10 @@ export const THUMB_SINGLE_ROW_MAX = 10;
 // Owner filter values
 export const OWNER_ALL: OwnerFilter = "all";
 export const OWNER_MINE: OwnerFilter = "mine";
+
+// File upload constraints
+export const UPLOAD_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+export const UPLOAD_ACCEPTED_TYPES = ".png,.jpg,.jpeg,.webp,.bmp,.tiff";
 
 // Search scope values
 export const SCOPE_VIEW: SearchScope = "view";

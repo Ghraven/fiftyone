@@ -49,11 +49,14 @@ class SimilaritySearchPanel(Panel):
         current_user = str(ctx.user_id) if ctx.user_id else None
         ctx.panel.set_data("current_user", current_user)
 
-        view_state = ctx.panel.get_state("view") or {"page": "home"}
-        ctx.panel.set_state("view", view_state)
+        # Enable alt-selection visual feedback for negative queries
+        ctx.ops.set_sample_selection_style(
+            default="green-checkmark", alt="red-checkmark"
+        )
 
     def on_unload(self, ctx):
         ctx.panel.set_state("applied_run_id", None)
+        ctx.ops.clear_sample_selection_style()
 
     # -- Panel methods exposed to frontend --
 
@@ -102,6 +105,8 @@ class SimilaritySearchPanel(Panel):
             else:
                 view = ctx.dataset.select(result_ids, ordered=True)
 
+            ctx.ops.clear_selected_samples()
+            ctx.ops.clear_selected_labels()
             ctx.ops.set_view(view)
             ctx.panel.set_state("applied_run_id", run_id)
 

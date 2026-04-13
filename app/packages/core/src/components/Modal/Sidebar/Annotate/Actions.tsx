@@ -9,7 +9,7 @@ import {
   useCurrent3dAnnotationMode,
   useSetCurrent3dAnnotationMode,
 } from "@fiftyone/looker-3d/src/state/accessors";
-import { is3DDataset, isPatchesView, useIs3dPinned } from "@fiftyone/state";
+import { is3DDataset, useIs3dPinned } from "@fiftyone/state";
 import {
   DETECTION,
   DETECTIONS,
@@ -24,9 +24,9 @@ import { useRecoilValue } from "recoil";
 import styled from "styled-components";
 import { ItemLeft, ItemRight } from "./Components";
 import { editing } from "./Edit";
-import { useClassification } from "./Edit/useClassification";
 import { fieldsOfType } from "./Edit/state";
-import { useQuickDraw } from "./Edit/useQuickDraw";
+import { useClassificationMode } from "./Edit/useClassificationMode";
+import { useDetectionMode } from "./Edit/useDetectionMode";
 
 const ActionsDiv = styled.div`
   align-items: center;
@@ -138,9 +138,8 @@ const Square = styled(Container)<{ $active?: boolean }>`
 const DeactivateAllContext = createContext<() => void>(() => {});
 
 /**
- * Returns a callback that deactivates all active annotation actions
- * (editing, QuickDraw, 3D modes). Action buttons should call this
- * before activating themselves.
+ * Returns a callback that deactivates any active annotation actions.
+ * Action buttons should call this before activating themselves.
  */
 export const useDeactivateAll = () => useContext(DeactivateAllContext);
 
@@ -176,20 +175,24 @@ const Select = ({ active }: { active: boolean }) => {
 };
 
 const Classification = () => {
-  const { classificationActive, disabled, tooltip, enableClassification } =
-    useClassification();
+  const {
+    classificationModeActive,
+    disabled,
+    tooltip,
+    activateClassificationMode,
+  } = useClassificationMode();
   const deactivateAll = useDeactivateAll();
 
   return (
     <Tooltip placement="top-center" text={tooltip}>
       <Square
-        $active={classificationActive}
+        $active={classificationModeActive}
         data-cy="create-classification"
-        data-cy-active={classificationActive}
+        data-cy-active={classificationModeActive}
         onClick={() => {
           if (disabled) return;
           deactivateAll();
-          if (!classificationActive) enableClassification();
+          if (!classificationModeActive) activateClassificationMode();
         }}
         className={disabled ? "disabled" : ""}
       >
@@ -212,30 +215,21 @@ const Classification = () => {
 };
 
 const Detection = () => {
-  const { quickDrawActive, enableQuickDraw } = useQuickDraw();
+  const { activateDetectionMode, detectionModeActive, disabled, tooltip } =
+    useDetectionMode();
   const deactivateAll = useDeactivateAll();
-  const isPatchView = useRecoilValue(isPatchesView);
-
-  const fields = useAtomValue(fieldsOfType(DETECTION));
-  const disabled = isPatchView || fields.length === 0;
-
-  const tooltip = isPatchView
-    ? "Creating detections is not supported in this view"
-    : quickDrawActive
-    ? "Exit detection creation"
-    : "Create new detections";
 
   return (
     <Tooltip placement="top-center" text={tooltip}>
       <Square
-        $active={quickDrawActive}
+        $active={detectionModeActive}
         className={disabled ? "disabled" : ""}
-        data-cy="quick-draw-detection"
-        data-cy-active={quickDrawActive}
+        data-cy="detection-mode"
+        data-cy-active={detectionModeActive}
         onClick={() => {
           if (disabled) return;
           deactivateAll();
-          if (!quickDrawActive) enableQuickDraw();
+          if (!detectionModeActive) activateDetectionMode();
         }}
       >
         <svg
@@ -421,20 +415,27 @@ const Actions = () => {
   // This checks if a 3d sample is pinned - is true when media type is `group` with a 3d slice pinned
   const is3dSamplePinned = useIs3dPinned();
 
-  const { classificationActive, disableClassification } = useClassification();
-  const { quickDrawActive, disableQuickDraw } = useQuickDraw();
+  const { classificationModeActive, deactivateClassificationMode } =
+    useClassificationMode();
+  const { detectionModeActive, deactivateDetectionMode } = useDetectionMode();
   const current3dAnnotationMode = useCurrent3dAnnotationMode();
   const setCurrent3dAnnotationMode = useSetCurrent3dAnnotationMode();
 
   const noActiveActions =
-    !classificationActive && !quickDrawActive && !current3dAnnotationMode;
+    !classificationModeActive &&
+    !detectionModeActive &&
+    !current3dAnnotationMode;
   const areThreeDActionsVisible = is3dDataset || is3dSamplePinned;
 
   const deactivateAll = useCallback(() => {
-    disableClassification();
+    deactivateClassificationMode();
     setCurrent3dAnnotationMode(null);
-    disableQuickDraw();
-  }, [disableClassification, disableQuickDraw, setCurrent3dAnnotationMode]);
+    deactivateDetectionMode();
+  }, [
+    deactivateClassificationMode,
+    deactivateDetectionMode,
+    setCurrent3dAnnotationMode,
+  ]);
 
   return (
     <DeactivateAllContext.Provider value={deactivateAll}>

@@ -6,6 +6,7 @@ Similarity search operators.
 |
 """
 
+import base64
 import logging
 from datetime import datetime, timezone
 
@@ -62,7 +63,9 @@ class SimilaritySearchOperator(foo.Operator):
         if not run_id:
             params = {**ctx.params}
             if ctx.user_id:
-                params["created_by"] = str(ctx.user_id)
+                params["created_by"] = getattr(ctx.user, "name", None) or str(
+                    ctx.user_id
+                )
             run_data = manager.create_run(params)
             run_id = run_data["run_id"]
 
@@ -74,7 +77,9 @@ class SimilaritySearchOperator(foo.Operator):
         if not run_data:
             params = {**ctx.params}
             if ctx.user_id:
-                params["created_by"] = str(ctx.user_id)
+                params["created_by"] = getattr(ctx.user, "name", None) or str(
+                    ctx.user_id
+                )
             run_data = manager.create_run(params)
             run_id = run_data["run_id"]
 
@@ -86,7 +91,6 @@ class SimilaritySearchOperator(foo.Operator):
             ctx.set_progress(0.1, label="Loading similarity index...")
 
             brain_key = ctx.params["brain_key"]
-            query = ctx.params["query"]
             k = ctx.params.get("k")
             reverse = ctx.params.get("reverse", False)
             dist_field = ctx.params.get("dist_field")
@@ -94,21 +98,25 @@ class SimilaritySearchOperator(foo.Operator):
 
             dataset = ctx.dataset
 
-            # Reconstruct the source view if provided
-            source_view = ctx.params.get("source_view")
-            if source_view:
-                from fiftyone.core.view import DatasetView
-
-                view = DatasetView._build(dataset, source_view)
-            else:
-                view = dataset.view()
+            # Always sort against the base dataset view.
+            # source_view is stored in the run record for context
+            # but not used for the sort itself, because the brain
+            # index may have been computed on the base dataset.
+            view = dataset.view()
 
             ctx.set_progress(0.2, label="Preparing query...")
+
+            # Handle uploaded image: embed on-the-fly
+            query_type = ctx.params.get("query_type")
+            if query_type == "upload":
+                query = self._embed_query_image(ctx)
+            else:
+                query = ctx.params["query"]
 
             # Handle negative query IDs (alt-selected samples)
             negative_query_ids = ctx.params.get("negative_query_ids")
             if negative_query_ids and isinstance(query, list):
-                # Vector arithmetic: mean(positive) - mean(negative)
+                # Weighted vector arithmetic: 2 * mean(positive) - mean(negative)
                 query = self._compute_combined_query(
                     dataset,
                     brain_key,
@@ -118,6 +126,11 @@ class SimilaritySearchOperator(foo.Operator):
                 )
 
             ctx.set_progress(0.3, label="Running similarity query...")
+
+            # For patches-based searches, ensure we're on a patches
+            # view before sorting (skip if already on patches)
+            if patches_field and not view._is_patches:
+                view = view.to_patches(patches_field)
 
             # Build kwargs, omitting None values
             kwargs = {"brain_key": brain_key}
@@ -132,7 +145,10 @@ class SimilaritySearchOperator(foo.Operator):
 
             ctx.set_progress(0.7, label="Collecting results...")
 
-            dynamic_results = ctx.params.get("dynamic_results", False)
+            dynamic_results = ctx.params.get("dynamic_results", True)
+
+            result_ids = []
+            result_view_stages = None
 
             if dynamic_results:
                 result_view_stages = result_view._serialize(
@@ -141,7 +157,6 @@ class SimilaritySearchOperator(foo.Operator):
                 result_count = len(result_view)
             else:
                 result_ids = [str(rid) for rid in result_view.values("id")]
-                result_view_stages = None
                 result_count = len(result_ids)
 
             ctx.set_progress(0.9, label="Saving results...")
@@ -181,7 +196,12 @@ class SimilaritySearchOperator(foo.Operator):
     ):
         """Compute a combined query vector from positive and negative samples.
 
-        Uses vector arithmetic: mean(positive_embeddings) - mean(negative_embeddings)
+        Uses weighted vector arithmetic:
+        2 * mean(positive_embeddings) - mean(negative_embeddings)
+
+        The 2x weight on positives ensures the query stays anchored in
+        the positive direction while gently steering away from negatives
+        (Qdrant-style recommendation formula).
 
         Args:
             dataset: the dataset
@@ -215,11 +235,91 @@ class SimilaritySearchOperator(foo.Operator):
 
         pos_mean = np.mean(pos_embeddings, axis=0)
 
+        # Qdrant-style: query = avg(pos) + (avg(pos) - avg(neg))
+        #                    = 2 * avg(pos) - avg(neg)
         if neg_embeddings:
             neg_mean = np.mean(neg_embeddings, axis=0)
-            return pos_mean - neg_mean
+            combined = 2 * pos_mean - neg_mean
         else:
-            return pos_mean
+            combined = pos_mean
+
+        # Normalize for backend-agnostic correctness (cosine doesn't
+        # need it, but dot-product and L2 backends do)
+        norm = np.linalg.norm(combined)
+        if norm > 0:
+            combined = combined / norm
+
+        return combined
+
+    @staticmethod
+    def _embed_query_image(ctx):
+        """Embed an uploaded query image on-the-fly using the index model.
+
+        Requires the brain key's config to have a zoo model name. Decodes
+        the base64 image content, loads the model, and returns the
+        embedding vector.
+
+        Args:
+            ctx: the execution context with params["brain_key"] and
+                params["query_image"] = {content: base64, name: str}
+
+        Returns:
+            numpy array representing the query embedding
+        """
+        import eta.core.image as etai
+        import fiftyone.zoo.models as fozm
+
+        brain_key = ctx.params["brain_key"]
+        query_image = ctx.params.get("query_image") or {}
+        content = query_image.get("content")
+        name = query_image.get("name", "unknown")
+
+        if not isinstance(content, str) or not content:
+            raise ValueError(
+                "Missing uploaded image content for brain key '%s'" % brain_key
+            )
+
+        # Server-side size limit aligned with UI constraint (10 MB raw)
+        max_bytes = 10 * 1024 * 1024
+        if len(content) > ((max_bytes * 4) // 3) + 8:
+            raise ValueError(
+                "Uploaded image '%s' exceeds size limit for brain key '%s'"
+                % (name, brain_key)
+            )
+
+        try:
+            img_bytes = base64.b64decode(content, validate=True)
+        except Exception:
+            raise ValueError(
+                "Invalid base64 content in uploaded image '%s' for brain "
+                "key '%s'" % (name, brain_key)
+            )
+
+        if len(img_bytes) > max_bytes:
+            raise ValueError(
+                "Uploaded image '%s' exceeds size limit for brain key '%s'"
+                % (name, brain_key)
+            )
+
+        try:
+            img = etai.decode(img_bytes)
+        except Exception:
+            raise ValueError(
+                "Failed to decode uploaded image '%s' for brain key '%s'"
+                % (name, brain_key)
+            )
+
+        info = ctx.dataset.get_brain_info(brain_key)
+        model_name = getattr(info.config, "model", None)
+        if not model_name:
+            raise ValueError(
+                "Upload query requires a brain run with a configured "
+                "model: '%s'" % brain_key
+            )
+
+        model = fozm.load_zoo_model(model_name)
+
+        return model.embed(img)
 
 
 class InitSimilarityRunOperator(foo.Operator):
@@ -242,7 +342,9 @@ class InitSimilarityRunOperator(foo.Operator):
         manager = RunManager(ctx)
         params = {**ctx.params}
         if ctx.user_id:
-            params["created_by"] = str(ctx.user_id)
+            params["created_by"] = getattr(ctx.user, "name", None) or str(
+                ctx.user_id
+            )
         run_data = manager.create_run(params)
         run_id = run_data["run_id"]
 
