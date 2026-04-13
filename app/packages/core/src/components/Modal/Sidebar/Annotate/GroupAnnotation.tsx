@@ -6,7 +6,6 @@ import { useRecoilValue, useSetRecoilState } from "recoil";
 import styled from "styled-components";
 import { isEditing } from "./Edit";
 import { useApplyAnnotationSliceVisibility } from "./useApplyAnnotationSliceVisibility";
-import { useGroupAnnotationModeController } from "./useGroupAnnotationModeController";
 import {
   AnnotationSliceInfo,
   useGroupAnnotationSlices,
@@ -149,8 +148,6 @@ interface GroupAnnotationProps {
 export default function GroupAnnotation({
   onSliceSelected,
 }: GroupAnnotationProps) {
-  useGroupAnnotationModeController();
-
   const slices = useGroupAnnotationSlices();
 
   if (slices === "loading") {
