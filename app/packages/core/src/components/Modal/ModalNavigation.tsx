@@ -1,4 +1,10 @@
 import {
+  KnownCommands,
+  KnownContexts,
+  useKeyBindings,
+  useUndoRedo,
+} from "@fiftyone/commands";
+import {
   LookerArrowLeftIcon,
   LookerArrowRightIcon,
 } from "@fiftyone/components";
@@ -10,12 +16,6 @@ import styled from "styled-components";
 import useExit from "./Sidebar/Annotate/Edit/useExit";
 import useSave from "./Sidebar/Annotate/Edit/useSave";
 import { createDebouncedNavigator } from "./debouncedNavigator";
-import {
-  KnownCommands,
-  KnownContexts,
-  useKeyBindings,
-  useUndoRedo,
-} from "@fiftyone/commands";
 
 const Arrow = styled.span<{
   $isRight?: boolean;

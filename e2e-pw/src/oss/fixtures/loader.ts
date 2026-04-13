@@ -115,7 +115,6 @@ export class OssLoader extends AbstractFiftyoneLoader {
         // eslint-disable-next-line
         // @ts-ignore
         window.__FO_PLAYWRIGHT_LOADING_SCREEN_COUNT += 1;
-        console.log(window.__FO_PLAYWRIGHT_LOADING_SCREEN_COUNT);
       });
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment

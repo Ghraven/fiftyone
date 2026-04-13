@@ -53,13 +53,12 @@ const ColorScheme = () => {
 };
 
 const LoadingFallback = () => {
-
   useEffect(() => {
-   document.dispatchEvent(new CustomEvent("loading-screen"));
-  }, [])
+    document.dispatchEvent(new CustomEvent("loading-screen"));
+  }, []);
 
-  return   <Loading>Pixelating...</Loading>
-}
+  return <Loading>Pixelating...</Loading>;
+};
 
 const Renderer = () => {
   const routeEntry = useRecoilValue(entry);
@@ -103,11 +102,10 @@ const Renderer = () => {
     );
   }, [router, setPending]);
 
-
-  if (!routeEntry || !ready) return <LoadingFallback/>;
+  if (!routeEntry || !ready) return <LoadingFallback />;
 
   return (
-    <Suspense fallback={<LoadingFallback/>}>
+    <Suspense fallback={<LoadingFallback />}>
       <ColorScheme key={"color-scheme"} />
       <Modal key={"modal"} />
       <Route key={"route"} route={routeEntry} />

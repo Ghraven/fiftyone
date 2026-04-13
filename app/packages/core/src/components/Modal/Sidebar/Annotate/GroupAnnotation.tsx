@@ -1,12 +1,16 @@
 import { Selector } from "@fiftyone/components";
 import * as fos from "@fiftyone/state";
 import { useAtomValue } from "jotai";
-import React, { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import styled from "styled-components";
 import { isEditing } from "./Edit";
 import { useApplyAnnotationSliceVisibility } from "./useApplyAnnotationSliceVisibility";
-import { useGroupAnnotationSlices } from "./useGroupAnnotationSlices";
+import { useGroupAnnotationModeController } from "./useGroupAnnotationModeController";
+import {
+  AnnotationSliceInfo,
+  useGroupAnnotationSlices,
+} from "./useGroupAnnotationSlices";
 
 const Container = styled.div`
   padding: 0 1rem 0.5rem 1.5rem;
@@ -27,10 +31,6 @@ interface SliceOptionProps {
   className?: string;
   isDisabled?: boolean;
   mediaType?: string;
-}
-
-interface AnnotationSliceSelectorProps {
-  onSliceSelected?: () => void;
 }
 
 const SliceOption = ({ value, isDisabled, mediaType }: SliceOptionProps) => {
@@ -54,48 +54,18 @@ const SliceOption = ({ value, isDisabled, mediaType }: SliceOptionProps) => {
   );
 };
 
-/**
- * Slice selector component for annotation mode in grouped datasets.
- * Shows a searchable dropdown of all slices, with unsupported media types disabled.
- * Auto-selects the first supported slice when mounted.
- */
-export const AnnotationSliceSelector: React.FC<
-  AnnotationSliceSelectorProps
-> = ({ onSliceSelected }) => {
+const SliceSelector = ({
+  onSliceSelected,
+  slices: allSlices,
+}: GroupAnnotationProps & { slices: AnnotationSliceInfo[] }) => {
   const isEditing_ = useAtomValue(isEditing);
-
-  const { allSlices, supportedSlices, preferredSlice, setPreferredSlice } =
-    useGroupAnnotationSlices();
-
-  const modalGroupSlice = useRecoilValue(fos.modalGroupSlice);
   const setModalGroupSlice = useSetRecoilState(fos.modalGroupSlice);
-
   const applyVisibilityForSlice = useApplyAnnotationSliceVisibility();
+  const current = useRecoilValue(fos.modalGroupSlice);
 
-  // Determine the effective slice to use:
-  // 1. If preferred slice is valid and supported, use it
-  // 2. Otherwise fall back to modalGroupSlice if it's supported
-  // 3. Otherwise use first supported slice
-  const effectiveSlice = useMemo(() => {
-    if (preferredSlice && supportedSlices.includes(preferredSlice)) {
-      return preferredSlice;
-    }
-    if (modalGroupSlice && supportedSlices.includes(modalGroupSlice)) {
-      return modalGroupSlice;
-    }
-
-    return supportedSlices.length > 0 ? supportedSlices[0] : null;
-  }, [preferredSlice, modalGroupSlice, supportedSlices]);
-
-  // This effect syncs slice state whenever effectiveSlice changes
-  useEffect(() => {
-    if (effectiveSlice) {
-      setPreferredSlice(effectiveSlice);
-      setModalGroupSlice(effectiveSlice);
-      applyVisibilityForSlice(effectiveSlice);
-      onSliceSelected?.();
-    }
-  }, [effectiveSlice, onSliceSelected, applyVisibilityForSlice]);
+  if (!current) {
+    throw new Error("no slice");
+  }
 
   const useSearch = useCallback(
     (search: string) => {
@@ -112,18 +82,22 @@ export const AnnotationSliceSelector: React.FC<
   const onSelect = useCallback(
     async (sliceName: string) => {
       const sliceInfo = allSlices.find((s) => s.name === sliceName);
-      if (!sliceInfo?.isSupported) {
-        // Don't allow selecting unsupported slices
-        return effectiveSlice;
+      if (!sliceInfo?.isSupported || sliceInfo?.isMissing) {
+        return current;
       }
 
-      setPreferredSlice(sliceName);
       setModalGroupSlice(sliceName);
       applyVisibilityForSlice(sliceName);
       onSliceSelected?.();
       return sliceName;
     },
-    [allSlices, effectiveSlice, applyVisibilityForSlice, onSliceSelected]
+    [
+      allSlices,
+      applyVisibilityForSlice,
+      onSliceSelected,
+      setModalGroupSlice,
+      current,
+    ]
   );
 
   const sliceInfoMap = useMemo(
@@ -161,9 +135,27 @@ export const AnnotationSliceSelector: React.FC<
         overflow={true}
         placeholder="Select slice..."
         useSearch={useSearch}
-        value={effectiveSlice || undefined}
+        value={current}
         cy="annotation-slice"
       />
     </Container>
   );
 };
+
+interface GroupAnnotationProps {
+  onSliceSelected?: () => void;
+}
+
+export default function GroupAnnotation({
+  onSliceSelected,
+}: GroupAnnotationProps) {
+  useGroupAnnotationModeController();
+
+  const slices = useGroupAnnotationSlices();
+
+  if (slices === "loading") {
+    return;
+  }
+
+  return <SliceSelector onSliceSelected={onSliceSelected} slices={slices} />;
+}

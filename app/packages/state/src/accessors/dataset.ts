@@ -1,11 +1,14 @@
+import { is3d } from "@fiftyone/utilities";
 import { useRecoilValue } from "recoil";
 import {
+  State,
   dataset,
   datasetId,
   datasetName,
   fieldSchema,
+  groupMediaTypes,
+  isGroup,
   selectedMediaField,
-  State,
 } from "../recoil";
 
 /**
@@ -46,4 +49,36 @@ export const useSampleSchema = () =>
  */
 export const useSelectedMediaFieldGrid = () => {
   return useRecoilValue(selectedMediaField(false));
+};
+
+/**
+ * Whether the current dataset is a grouped dataset.
+ *
+ * @returns True if the current dataset is a group dataset
+ */
+export const useIsGroupDataset = () => {
+  return useRecoilValue(isGroup);
+};
+
+export type GroupSliceMediaType = "video" | "3d" | "image";
+
+/**
+ * Returns the names of dataset-level group slices whose media type matches
+ * any of the provided types.
+ *
+ * @param mediaTypes - The media types to filter by. "3d" matches all 3D
+ *   types (fo3d, point-cloud, etc.).
+ * @returns Slice names matching the requested media types, in dataset order.
+ */
+export const useGroupSlices = (mediaTypes: GroupSliceMediaType[]): string[] => {
+  const slices = useRecoilValue(groupMediaTypes);
+
+  return slices
+    .filter(({ mediaType }) =>
+      mediaTypes.some((type) => {
+        if (type === "3d") return is3d(mediaType);
+        return mediaType === type;
+      })
+    )
+    .map(({ name }) => name);
 };

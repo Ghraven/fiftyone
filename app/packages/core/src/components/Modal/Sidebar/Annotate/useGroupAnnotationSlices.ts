@@ -1,69 +1,48 @@
-import {
-  currentGroupSliceNames,
-  groupMediaTypes,
-  isGroup,
-  usePreferredGroupAnnotationSlice,
-} from "@fiftyone/state";
+import { currentGroupSliceNames, groupMediaTypes } from "@fiftyone/state";
 import { is3d, isAnnotationSupported } from "@fiftyone/utilities";
 import { useMemo } from "react";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useRecoilValueLoadable } from "recoil";
 
 export interface AnnotationSliceInfo {
+  /** Slice name. */
   name: string;
+  /** Raw media type string (e.g. "image", "point-cloud"). */
   mediaType: string;
+  /** Whether this slice's media type can be annotated. */
   isSupported: boolean;
+  /** Whether this slice's media type is a 3D type. */
   is3D: boolean;
+
+  /** Whether this slice is absent from the currently open group (sparse dataset). */
+  isMissing: boolean;
 }
 
-export interface UseGroupAnnotationSlicesResult {
-  /** All slices with metadata about their annotation support */
-  allSlices: AnnotationSliceInfo[];
-  /** Names of slices that support annotation (image, 3D) */
-  supportedSlices: string[];
-  /** The currently stored annotation slice (persisted per-dataset) */
-  preferredSlice: string | null;
-  /** Function to update the preferred annotation slice */
-  setPreferredSlice: (slice: string | null) => void;
-}
+export function useGroupAnnotationSlices(): AnnotationSliceInfo[] | "loading" {
+  const currentSlices = useRecoilValueLoadable(currentGroupSliceNames);
+  const sliceInfo = useRecoilValue(groupMediaTypes);
 
-/**
- * Hook that provides information about available slices for annotation
- * and manages the preferred annotation slice state.
- */
-export function useGroupAnnotationSlices(): UseGroupAnnotationSlicesResult {
-  const mediaTypes = useRecoilValue(groupMediaTypes);
-  const currentSlices = useRecoilValue(currentGroupSliceNames);
-  const isGroupDataset = useRecoilValue(isGroup);
-
-  const [preferredSlice, setPreferredSlice] =
-    usePreferredGroupAnnotationSlice();
-
-  const sliceData = useMemo(() => {
-    if (!isGroupDataset || !mediaTypes.length) {
-      return {
-        allSlices: [] as AnnotationSliceInfo[],
-        supportedSlices: [] as string[],
-      };
+  return useMemo(() => {
+    if (currentSlices.state === "loading") {
+      return "loading";
     }
 
-    // Grouped datasets can be sparse. In annotate mode, only offer slices that
-    // actually exist on the currently opened group instead of every dataset-
-    // level slice definition.
-    const currentSliceSet = new Set(currentSlices);
-    const availableMediaTypes =
-      currentSliceSet.size > 0
-        ? mediaTypes.filter(({ name }) => currentSliceSet.has(name))
-        : mediaTypes;
+    if (currentSlices.state === "hasError") {
+      throw currentSlices.contents;
+    }
 
-    const allSlices: AnnotationSliceInfo[] = availableMediaTypes
+    if (!sliceInfo.length) {
+      return [];
+    }
+
+    const result = sliceInfo
       .map(({ name, mediaType }) => ({
         name,
         mediaType,
+        isMissing: !currentSlices.contents.includes(name),
         isSupported: isAnnotationSupported(mediaType),
         is3D: is3d(mediaType),
       }))
-      .toSorted((a, b) => {
-        // Sink unsupported slices to the bottom
+      .sort((a, b) => {
         if (a.isSupported !== b.isSupported) {
           return Number(b.isSupported) - Number(a.isSupported);
         }
@@ -71,19 +50,6 @@ export function useGroupAnnotationSlices(): UseGroupAnnotationSlicesResult {
         return 0;
       });
 
-    const supportedSlices = allSlices
-      .filter((s) => s.isSupported)
-      .map((s) => s.name);
-
-    return {
-      allSlices,
-      supportedSlices,
-    };
-  }, [currentSlices, isGroupDataset, mediaTypes]);
-
-  return {
-    ...sliceData,
-    preferredSlice,
-    setPreferredSlice,
-  };
+    return result;
+  }, [currentSlices, sliceInfo]);
 }

@@ -5,22 +5,15 @@
 import {
   activeField,
   datasetSampleCount,
-  groupMediaTypesMap,
-  isGroup,
   mediaType,
   queryPerformanceMaxSearch,
   useNotification,
-  usePreferredGroupAnnotationSlice,
 } from "@fiftyone/state";
-import {
-  useSchemaManager,
-  type UpdateSchemaRequest,
-} from "../useSchemaManager";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useAtomCallback } from "jotai/utils";
-import { useRecoilCallback, useRecoilValue } from "recoil";
 import { isEqual } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRecoilCallback, useRecoilValue } from "recoil";
 import {
   activeLabelSchemas,
   activePaths,
@@ -36,6 +29,11 @@ import {
   schemaManagerDisplayedAtom,
 } from "../state";
 import {
+  useSchemaManager,
+  type UpdateSchemaRequest,
+} from "../useSchemaManager";
+import { PRIMITIVE_FIELD_TYPES } from "./constants";
+import {
   draftJsonContent,
   fieldHasSchema,
   fieldIsReadOnly,
@@ -48,7 +46,6 @@ import {
   selectedHiddenFields,
   sortedInactivePaths,
 } from "./state";
-import { PRIMITIVE_FIELD_TYPES } from "./constants";
 
 // =============================================================================
 // Current Field Hooks
@@ -84,10 +81,18 @@ export const useSetCurrentField = () => {
  * Hook to control the schema manager modal visibility
  */
 export const useSchemaManagerModal = () => {
-  const [schemaManagerDisplayed, setSchemaManagerDisplayed] = useAtom(schemaManagerDisplayedAtom);
+  const [schemaManagerDisplayed, setSchemaManagerDisplayed] = useAtom(
+    schemaManagerDisplayedAtom
+  );
 
-  const openSchemaManager = useCallback(() => setSchemaManagerDisplayed(true), [setSchemaManagerDisplayed]);
-  const closeSchemaManager = useCallback(() => setSchemaManagerDisplayed(false), [setSchemaManagerDisplayed]);
+  const openSchemaManager = useCallback(
+    () => setSchemaManagerDisplayed(true),
+    [setSchemaManagerDisplayed]
+  );
+  const closeSchemaManager = useCallback(
+    () => setSchemaManagerDisplayed(false),
+    [setSchemaManagerDisplayed]
+  );
 
   return { schemaManagerDisplayed, openSchemaManager, closeSchemaManager };
 };
@@ -658,14 +663,6 @@ export const useExitNewFieldMode = () => {
  */
 export const useMediaType = () => {
   const datasetMediaType = useRecoilValue(mediaType);
-  const isGroupDataset = useRecoilValue(isGroup);
-  const sliceMediaTypesMap = useRecoilValue(groupMediaTypesMap);
-  const [preferredSlice] = usePreferredGroupAnnotationSlice();
-
-  if (isGroupDataset && preferredSlice && sliceMediaTypesMap[preferredSlice]) {
-    return sliceMediaTypesMap[preferredSlice];
-  }
-
   return datasetMediaType;
 };
 

@@ -3,7 +3,7 @@ import { usePanelTitle } from "@fiftyone/spaces";
 import * as fos from "@fiftyone/state";
 import { groupId, useBrowserStorage } from "@fiftyone/state";
 import { Resizable } from "re-resizable";
-import React, { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useRecoilValue } from "recoil";
 import EnsureGroupSample from "./EnsureGroupSample";
 import { groupContainer, mainGroup } from "./Group.module.css";
@@ -19,7 +19,7 @@ export const GroupView = () => {
   const mediaField = useRecoilValue(fos.selectedMediaField(true));
   const isCarouselVisible = useRecoilValue(fos.groupMediaIsCarouselVisible);
   const isMainVisible = useRecoilValue(fos.groupMediaIsMain2DViewerVisible);
-  const { is3dVisible } = fos.useRenderConfig3dState();
+  const is3dVisible = fos.useIs3dVisible();
   const [width, setWidth] = useBrowserStorage(
     "group-modal-split-view-width",
     DEFAULT_SPLIT_VIEW_LEFT_WIDTH

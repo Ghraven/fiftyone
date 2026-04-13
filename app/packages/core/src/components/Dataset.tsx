@@ -53,6 +53,7 @@ function Dataset() {
   return (
     <>
       <ModalWrapper key={"modal"} />
+
       {isCustomizeColorModalActive && <ColorModal key={"color"} />}
       <Container key={"dataset"}>
         <Body key={"body"}>
@@ -63,5 +64,4 @@ function Dataset() {
     </>
   );
 }
-
 export default React.memo(Dataset);

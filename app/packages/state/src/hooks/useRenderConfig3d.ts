@@ -87,12 +87,65 @@ export type RenderConfig3dImperativeState = {
   getIsPinned: () => Promise<boolean>;
 };
 
+/** Whether the 3D viewer is currently visible. */
 export const useIs3dVisible = () =>
   useRecoilValue(internals.groupMediaIs3dVisible);
 
+/** Persisted user preference for showing the 3D viewer. */
+export const useIs3dVisibleSetting = () =>
+  useRecoilValue(internals.groupMedia3dVisibleSetting);
+
+/** Whether the 3D slice selection is pinned to a specific slice. */
 export const useIs3dPinned = () => useRecoilValue(internals.is3dPinned);
 
+/** Whether the current modal context exposes any 3D slice. */
+export const useHas3dSlice = () => useRecoilValue(internals.has3dSlice);
+
+/** The 3D slice names currently included in the rendered scene. */
 export const useActive3dSlices = () => useRecoilValue(internals.active3dSlices);
+
+/** Resolved samples for the currently active 3D slices. */
+export const useActive3dSamplesMap = () =>
+  useRecoilValue(internals.active3dSlicesToSampleMap);
+
+/** Resolved samples for every available 3D slice in the current modal context. */
+export const useAll3dSamplesMap = () =>
+  useRecoilValue(internals.all3dSlicesToSampleMap);
+
+/** Slice name currently pinned for 3D rendering, if any. */
+export const usePinned3dSlice = () =>
+  useRecoilValue(internals.pinned3DSampleSlice);
+
+/** Representative sample used for 3D interaction-driven behavior. */
+export const useInteraction3dSample = () =>
+  useRecoilValue(internals.interaction3dSample);
+
+/** Sample currently used to render the visible 3D scene. */
+export const useSceneSample3d = () => useRecoilValue(internals.sceneSample);
+
+/** Active FO3D slice currently driving the scene, if one is selected. */
+export const useActiveFo3dSlice = () =>
+  useRecoilValue(internals.activeFo3dSlice);
+
+/** Active non-FO3D 3D slices rendered alongside the scene. */
+export const useActiveDirectSlices = () =>
+  useRecoilValue(internals.activeNonFo3d3dSlices);
+
+/** All available 3D slice names. */
+export const useAll3dSlices = () => useRecoilValue(internals.all3dSlices);
+
+/** All available non-3D slice names. */
+export const useNon3dSlices = () => useRecoilValue(internals.allNon3dSlices);
+
+/** Whether more than one 3D slice is available. */
+export const useHasMultiple3dSlices = () =>
+  useRecoilValue(internals.hasMultiple3dSlices);
+
+/** Available 3D slices whose media resolves to FO3D files. */
+export const useRealFo3dSlices = () => useRecoilValue(internals.realFo3dSlices);
+
+/** Parsed FO3D scene content cached for the active scene sample. */
+export const useFo3dContent = () => useRecoilValue(internals.fo3dContent);
 
 /**
  * Suspense-compatible 3D render state for React rendering.

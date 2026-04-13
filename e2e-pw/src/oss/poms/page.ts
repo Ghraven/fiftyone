@@ -16,9 +16,9 @@ export class PagePom {
   }
 
   get loadingScreenCount(): Promise<number> {
-    // eslint-disable-next-line
-    // @ts-ignore
     return this.page.evaluate(
+      // eslint-disable-next-line
+      // @ts-ignore
       () => window.__FO_PLAYWRIGHT_LOADING_SCREEN_COUNT
     );
   }

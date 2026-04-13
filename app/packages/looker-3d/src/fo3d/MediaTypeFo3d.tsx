@@ -98,7 +98,8 @@ const Fo3dPanels = ({
 };
 
 export const MediaTypeFo3dComponent = () => {
-  const { interactionSample, sceneSample } = fos.useRenderConfig3dState();
+  const interactionSample = fos.useInteraction3dSample();
+  const sceneSample = fos.useSceneSample3d();
   const settings = usePluginSettings<Looker3dSettings>("3d");
   const mode = fos.useModalMode();
   const canAnnotate = useCanAnnotate().showAnnotationTab;

@@ -9,11 +9,7 @@ import {
   useCurrent3dAnnotationMode,
   useSetCurrent3dAnnotationMode,
 } from "@fiftyone/looker-3d/src/state/accessors";
-import {
-  is3DDataset,
-  isPatchesView,
-  useRenderConfig3dState,
-} from "@fiftyone/state";
+import { is3DDataset, isPatchesView, useIs3dPinned } from "@fiftyone/state";
 import {
   DETECTION,
   DETECTIONS,
@@ -154,11 +150,11 @@ const Select = ({ active }: { active: boolean }) => {
   return (
     <Tooltip placement="top-center" text="Select">
       <Square
-          $active={active}
-          data-cy="select-action"
-          data-cy-active={active}
-          onClick={active ? undefined : deactivateAll}
-        >
+        $active={active}
+        data-cy="select-action"
+        data-cy-active={active}
+        onClick={active ? undefined : deactivateAll}
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="19"
@@ -180,12 +176,8 @@ const Select = ({ active }: { active: boolean }) => {
 };
 
 const Classification = () => {
-  const {
-    classificationActive,
-    disabled,
-    tooltip,
-    enableClassification,
-  } = useClassification();
+  const { classificationActive, disabled, tooltip, enableClassification } =
+    useClassification();
   const deactivateAll = useDeactivateAll();
 
   return (
@@ -427,7 +419,7 @@ const Actions = () => {
   // This checks if media type of the dataset resolved to 3d
   const is3dDataset = useRecoilValue(is3DDataset);
   // This checks if a 3d sample is pinned - is true when media type is `group` with a 3d slice pinned
-  const { isPinned: is3dSamplePinned } = useRenderConfig3dState();
+  const is3dSamplePinned = useIs3dPinned();
 
   const { classificationActive, disableClassification } = useClassification();
   const { quickDrawActive, disableQuickDraw } = useQuickDraw();
