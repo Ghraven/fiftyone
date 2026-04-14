@@ -235,7 +235,7 @@ class ModalSidebarAsserter {
       ({ key_, value_ }: { key_: string; value_: string }) => {
         return (
           document.querySelector(`[data-cy='sidebar-entry-${key_}']`)
-            .textContent === value_
+            ?.textContent === value_
         );
       },
       { key_: key, value_: value },

@@ -17,6 +17,27 @@ export interface AnnotationSliceInfo {
   isMissing: boolean;
 }
 
+export const resolveSlices = (
+  currentSlices: string[],
+  sliceInfo: { name: string; mediaType: string }[]
+): AnnotationSliceInfo[] => {
+  return sliceInfo
+    .map(({ name, mediaType }) => ({
+      name,
+      mediaType,
+      isMissing: !currentSlices.includes(name),
+      isSupported: isAnnotationSupported(mediaType),
+      is3D: is3d(mediaType),
+    }))
+    .toSorted((a, b) => {
+      if (a.isSupported !== b.isSupported) {
+        return Number(b.isSupported) - Number(a.isSupported);
+      }
+
+      return 0;
+    });
+};
+
 export function useGroupAnnotationSlices(): AnnotationSliceInfo[] | "loading" {
   const currentSlices = useRecoilValueLoadable(currentGroupSliceNames);
   const sliceInfo = useRecoilValue(groupMediaTypes);
@@ -34,22 +55,6 @@ export function useGroupAnnotationSlices(): AnnotationSliceInfo[] | "loading" {
       return [];
     }
 
-    const result = sliceInfo
-      .map(({ name, mediaType }) => ({
-        name,
-        mediaType,
-        isMissing: !currentSlices.contents.includes(name),
-        isSupported: isAnnotationSupported(mediaType),
-        is3D: is3d(mediaType),
-      }))
-      .sort((a, b) => {
-        if (a.isSupported !== b.isSupported) {
-          return Number(b.isSupported) - Number(a.isSupported);
-        }
-
-        return 0;
-      });
-
-    return result;
+    return resolveSlices(currentSlices.contents, sliceInfo);
   }, [currentSlices, sliceInfo]);
 }

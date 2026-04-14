@@ -25,14 +25,12 @@ const Label = styled.div`
   white-space: nowrap;
 `;
 
-interface SliceOptionProps {
+interface SliceOptionProps extends AnnotationSliceInfo {
   value: string;
-  className?: string;
-  isDisabled?: boolean;
-  mediaType?: string;
 }
 
-const SliceOption = ({ value, isDisabled, mediaType }: SliceOptionProps) => {
+const SliceOption = ({ value, mediaType, ...info }: SliceOptionProps) => {
+  const isDisabled = info.isMissing || !info.isSupported;
   return (
     <span
       style={{
@@ -40,15 +38,21 @@ const SliceOption = ({ value, isDisabled, mediaType }: SliceOptionProps) => {
         cursor: isDisabled ? "not-allowed" : "pointer",
       }}
       title={
-        isDisabled
+        !info.isSupported
           ? `${
               mediaType ? `"${mediaType}"` : "This"
             } media type does not support annotation`
+          : info.isMissing
+          ? `${value} slice does not exist"`
           : undefined
       }
     >
       {value}
-      {isDisabled && " (unsupported)"}
+      {!info.isSupported
+        ? " (unsupported)"
+        : info.isMissing
+        ? " (missing)"
+        : null}
     </span>
   );
 };
@@ -61,10 +65,6 @@ const SliceSelector = ({
   const setModalGroupSlice = useSetRecoilState(fos.modalGroupSlice);
   const applyVisibilityForSlice = useApplyAnnotationSliceVisibility();
   const current = useRecoilValue(fos.modalGroupSlice);
-
-  if (!current) {
-    throw new Error("no slice");
-  }
 
   const useSearch = useCallback(
     (search: string) => {
@@ -108,13 +108,7 @@ const SliceSelector = ({
     () =>
       ({ value }: { value: string }) => {
         const info = sliceInfoMap[value];
-        return (
-          <SliceOption
-            value={value}
-            isDisabled={info && !info.isSupported}
-            mediaType={info?.mediaType}
-          />
-        );
+        return <SliceOption value={value} {...info} />;
       },
     [sliceInfoMap]
   );

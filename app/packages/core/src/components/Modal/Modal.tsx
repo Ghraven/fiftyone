@@ -27,6 +27,7 @@ import {
 import { is3d } from "@fiftyone/utilities";
 import React, {
   Fragment,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -351,8 +352,13 @@ const Modal = () => {
         data-cy="modal"
       >
         <Actions />
-        {isAnnotationEnabled && <AnnotationHandlerRegistration />}
+        {isAnnotationEnabled && (
+          <Suspense>
+            <AnnotationHandlerRegistration />
+          </Suspense>
+        )}
         <TooltipInfo />
+
         <ModalContainer style={{ ...screenParams }}>
           <ReactErrorBoundary
             FallbackComponent={ModalErrorFallback}
