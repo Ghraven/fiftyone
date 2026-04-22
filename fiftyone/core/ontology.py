@@ -16,6 +16,7 @@ from fiftyone.core.annotation.attributes import (
     _attr_insert_to_dict,
 )
 from fiftyone.core.odm.ontology import OntologyDocument, OntologyType
+from fiftyone.internal.features.registry import require_feature
 
 
 class Ontology(abc.ABC):
@@ -78,6 +79,7 @@ class Ontology(abc.ABC):
 
         return None
 
+    @require_feature("VFF_ONTOLOGY_CA")
     def save(self) -> None:
         """Saves this ontology to the database."""
         if self._doc is None:
@@ -94,6 +96,7 @@ class Ontology(abc.ABC):
 
         self._doc.save()
 
+    @require_feature("VFF_ONTOLOGY_CA")
     def reload(self) -> None:
         """Reloads this ontology from the database."""
         if self._doc is None:
@@ -104,6 +107,7 @@ class Ontology(abc.ABC):
         self._doc.reload()
         self._apply_doc(self._doc)
 
+    @require_feature("VFF_ONTOLOGY_CA")
     def delete(self) -> None:
         """Deletes this ontology from the database."""
         if self._doc is None:
@@ -331,6 +335,7 @@ def _from_doc(doc: OntologyDocument) -> Ontology:
 # ---- Module-level CRUD functions ------------------------------------------
 
 
+@require_feature("VFF_ONTOLOGY_CA")
 def create_ontology(ontology: Ontology) -> None:
     """Saves an ontology to the database.
 
@@ -340,6 +345,7 @@ def create_ontology(ontology: Ontology) -> None:
     ontology.save()
 
 
+@require_feature("VFF_ONTOLOGY_CA")
 def load_ontology(name: str) -> Ontology:
     """Loads the latest version of an ontology by name.
 
@@ -363,6 +369,7 @@ def load_ontology(name: str) -> Ontology:
     return _from_doc(doc)
 
 
+@require_feature("VFF_ONTOLOGY_CA")
 def list_ontologies(glob_patt: Optional[str] = None) -> list[str]:
     """Lists ontology names in the database.
 
@@ -383,6 +390,7 @@ def list_ontologies(glob_patt: Optional[str] = None) -> list[str]:
     return sorted(docs.distinct("name"))
 
 
+@require_feature("VFF_ONTOLOGY_CA")
 def ontology_exists(name: str) -> bool:
     """Checks if an ontology with the given name exists.
 
@@ -400,6 +408,7 @@ def ontology_exists(name: str) -> bool:
     )
 
 
+@require_feature("VFF_ONTOLOGY_CA")
 def delete_ontology(name: str, force: bool = False) -> None:
     """Deletes an ontology and all its versions from the database.
 
@@ -418,6 +427,7 @@ def delete_ontology(name: str, force: bool = False) -> None:
         raise ValueError(f"Ontology '{name}' not found")
 
 
+@require_feature("VFF_ONTOLOGY_CA")
 def rename_ontology(name: str, new_name: str) -> None:
     """Renames an ontology (all versions).
 
@@ -432,6 +442,7 @@ def rename_ontology(name: str, new_name: str) -> None:
         raise ValueError(f"Ontology '{name}' not found")
 
 
+@require_feature("VFF_ONTOLOGY_CA")
 def clone_ontology(name: str, new_name: str) -> Ontology:
     """Clones an ontology under a new name.
 

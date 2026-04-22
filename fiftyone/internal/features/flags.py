@@ -8,6 +8,8 @@ FiftyOne feature flags.
 
 from typing import Literal
 
-
-FeatureFlag = Literal["VFF_AI_SEGMENTATION"]
+FeatureFlag = Literal[
+    "VFF_AI_SEGMENTATION",
+    "VFF_ONTOLOGY_CA",
+]
 """Enumeration of active feature flags."""
