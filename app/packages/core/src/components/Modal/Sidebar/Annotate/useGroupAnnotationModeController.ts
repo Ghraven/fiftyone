@@ -32,7 +32,7 @@ const useApplySlice = () => {
         ({ isSupported, isMissing }) => isSupported && !isMissing
       );
 
-      if (!available.findIndex(({ name }) => name === current)) {
+      if (available.findIndex(({ name }) => name === current) === -1) {
         return available[0]?.name ?? null;
       }
 
