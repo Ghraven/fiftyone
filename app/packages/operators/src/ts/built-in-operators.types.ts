@@ -87,6 +87,26 @@ export type ListOpenPanelsHooks = {
   openedModalPanels: SpaceNode[];
 };
 
+export type GetPanelStateHooks = {
+  openedPanels: SpaceNode[];
+  panelsState: Map<string, unknown>;
+};
+
+export type GetPanelStateParams = {
+  id?: string;
+  name?: string;
+};
+
+export type GetPanelDataHooks = {
+  openedPanels: SpaceNode[];
+  panelsData: Map<string, unknown>;
+};
+
+export type GetPanelDataParams = {
+  id?: string;
+  name?: string;
+};
+
 /**
  * Dataset
  */
